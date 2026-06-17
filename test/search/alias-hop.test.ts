@@ -55,7 +55,7 @@ describe('applyAliasHop', () => {
     expect(out.filter(r => r.slug === 'projects/mingtang').length).toBe(1); // no dup
     const m = out.find(r => r.slug === 'projects/mingtang')!;
     expect(m.alias_hit).toBe(true);
-    expect(m.score).toBeCloseTo(0.4 * 1.10, 6); // bounded present-boost
+    expect(m.score).toBeCloseTo(0.4 * 5.0, 6); // bounded present-boost
   });
 
   test('P0 source-isolation: alias hop boosts only the aliased source, not the same slug in another source', async () => {
@@ -70,7 +70,7 @@ describe('applyAliasHop', () => {
     const a = out.find(r => r.source_id === 'src-a')!;
     const b = out.find(r => r.source_id === 'src-b')!;
     expect(b.alias_hit).toBe(true);
-    expect(b.score).toBeCloseTo(0.5 * 1.10, 6);
+    expect(b.score).toBeCloseTo(0.5 * 5.0, 6);
     expect(a.alias_hit).toBeUndefined(); // NOT cross-boosted
     expect(a.score).toBe(0.5);
   });

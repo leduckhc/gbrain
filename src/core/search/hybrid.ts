@@ -577,7 +577,13 @@ async function applyAliasResolvedBoost(
 }
 
 // T3 — free-text alias hop tuning.
-const ALIAS_HOP_PRESENT_BOOST = 1.10; // bounded boost when canonical already in results
+// XDENT-PATCH: bumped from 1.10 to 5.0 — bare numeric code queries (e.g.
+// "00953") otherwise get drowned by vector cosine matches against pages
+// that mention the code in cross-references. The 5.0× factor lets the
+// alias-matched canonical page outrank generic semantic neighbours while
+// still leaving room for adaptive trim. See projects/gbrain-deployment/
+// docs/xdent-patches.md (Diana repo) for measured impact.
+const ALIAS_HOP_PRESENT_BOOST = 5.0;
 const MAX_ALIAS_QUERY_TOKENS = 6;     // skip long queries (clearly not a chosen name)
 const MAX_ALIAS_INJECT = 3;           // cap injected pages per query (collision safety)
 

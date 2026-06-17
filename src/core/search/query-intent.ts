@@ -97,6 +97,19 @@ const ENTITY_PATTERNS = [
   /\bbackground\b/i,
   /\bprofile\b/i,
   /\bwhat\s+do\s+(you|we)\s+know\b/i,
+  // XDENT-PATCH: Czech entity-style queries (dental codes + identifier phrases).
+  // gbrain's intent classifier was English-only; without these regexes Czech
+  // queries fall through to 'general' intent and miss the 1.25× exactMatchBoost
+  // that pages-by-canonical-name should win.
+  /^\s*\d{4,7}\s*$/, // bare numeric code: "00953", "7030101"
+  /\bk[oó]d\s+\d{4,7}\b/i, // "kód 00953"
+  /\bv[ýy]kon\s+\d{4,7}\b/i, // "výkon 00953"
+  /\bv[ýy]robek\s+\d{4,7}\b/i, // "výrobek 7030101"
+  /\bco\s+je\s+(v[ýy]kon|v[ýy]robek|k[oó]d)\b/i, // "co je výkon"
+  /\bkdo\s+(je|to\s+je)\b/i, // "kdo je", "kdo to je" (Czech equiv of "who is")
+  /\bco\s+(je|to\s+je|znamen[áa])\b/i, // "co je", "co znamená" (Czech "what is")
+  /\bpopi[sš]\b/i, // "popiš", "popis" (Czech "describe")
+  /\bp[řr]ehled\b/i, // "přehled" (Czech "overview")
 ];
 
 const FULL_CONTEXT_PATTERNS = [
