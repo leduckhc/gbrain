@@ -1223,6 +1223,32 @@ export class PostgresEngine implements BrainEngine {
     return rows.map(rowToPage);
   }
 
+  async countPages(filters?: PageFilters): Promise<number> {
+    const sql = this.sql;
+    const typeCondition = filters?.type ? sql`AND p.type = ${filters.type}` : sql``;
+    const tagJoin = filters?.tag ? sql`JOIN tags t ON t.page_id = p.id` : sql``;
+    const tagCondition = filters?.tag ? sql`AND t.tag = ${filters.tag}` : sql``;
+    const updatedCondition = filters?.updated_after
+      ? sql`AND p.updated_at > ${filters.updated_after}::timestamptz`
+      : sql``;
+    const slugPrefix = filters?.slugPrefix;
+    const slugCondition = slugPrefix
+      ? sql`AND p.slug LIKE ${slugPrefix.replace(/[\\%_]/g, (c) => '\\' + c) + '%'} ESCAPE '\\'`
+      : sql``;
+    const sourceCondition = filters?.sourceIds && filters.sourceIds.length > 0
+      ? sql`AND p.source_id = ANY(${filters.sourceIds}::text[])`
+      : filters?.sourceId
+        ? sql`AND p.source_id = ${filters.sourceId}`
+        : sql``;
+    const deletedCondition = filters?.includeDeleted === true ? sql`` : sql`AND p.deleted_at IS NULL`;
+    const rows = await sql`
+      SELECT COUNT(*)::int AS count FROM pages p
+      ${tagJoin}
+      WHERE 1=1 ${typeCondition} ${tagCondition} ${updatedCondition} ${slugCondition} ${sourceCondition} ${deletedCondition}
+    `;
+    return (rows[0]?.count as number) ?? 0;
+  }
+
   async getAllSlugs(opts?: { sourceId?: string }): Promise<Set<string>> {
     const sql = this.sql;
     // v0.31.8 (D12): two-branch. See pglite-engine.ts:getAllSlugs for context.

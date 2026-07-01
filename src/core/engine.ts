@@ -814,6 +814,12 @@ export interface BrainEngine {
    */
   listPages(filters?: PageFilters): Promise<Page[]>;
   /**
+   * Count pages matching the same filters as `listPages` (ignoring
+   * limit/offset/sort). Used for offset pagination UIs that need a total /
+   * page count. Cheap single COUNT(*) with the same WHERE clause.
+   */
+  countPages(filters?: PageFilters): Promise<number>;
+  /**
    * Fuzzy slug resolver.
    *
    * v0.41.13 (#1436): `opts.sourceId` scopes the search to a single source;

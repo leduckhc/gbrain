@@ -1225,6 +1225,45 @@ export class PGLiteEngine implements BrainEngine {
     return (rows as Record<string, unknown>[]).map(rowToPage);
   }
 
+  async countPages(filters?: PageFilters): Promise<number> {
+    const where: string[] = [];
+    const params: unknown[] = [];
+    const tagJoin = filters?.tag ? 'JOIN tags t ON t.page_id = p.id' : '';
+    if (filters?.type) {
+      params.push(filters.type);
+      where.push(`p.type = $${params.length}`);
+    }
+    if (filters?.tag) {
+      params.push(filters.tag);
+      where.push(`t.tag = $${params.length}`);
+    }
+    if (filters?.updated_after) {
+      params.push(filters.updated_after);
+      where.push(`p.updated_at > $${params.length}::timestamptz`);
+    }
+    if (filters?.slugPrefix) {
+      const escaped = filters.slugPrefix.replace(/[\\%_]/g, (c) => '\\' + c) + '%';
+      params.push(escaped);
+      where.push(`p.slug LIKE $${params.length} ESCAPE '\\'`);
+    }
+    if (filters?.sourceIds && filters.sourceIds.length > 0) {
+      params.push(filters.sourceIds);
+      where.push(`p.source_id = ANY($${params.length}::text[])`);
+    } else if (filters?.sourceId) {
+      params.push(filters.sourceId);
+      where.push(`p.source_id = $${params.length}`);
+    }
+    if (filters?.includeDeleted !== true) {
+      where.push('p.deleted_at IS NULL');
+    }
+    const whereSql = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+    const { rows } = await this.db.query(
+      `SELECT COUNT(*)::int AS count FROM pages p ${tagJoin} ${whereSql}`,
+      params
+    );
+    return ((rows as { count: number }[])[0]?.count) ?? 0;
+  }
+
   async getAllSlugs(opts?: { sourceId?: string }): Promise<Set<string>> {
     // v0.31.8 (D12): when opts.sourceId is set, return only that source's
     // slugs (used by reconcileLinks so wikilink resolution doesn't span

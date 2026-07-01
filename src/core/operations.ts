@@ -1337,7 +1337,8 @@ const list_pages: Operation = {
   params: {
     type: { type: 'string', description: 'Filter by page type' },
     tag: { type: 'string', description: 'Filter by tag' },
-    limit: { type: 'number', description: 'Max results (default 50)' },
+    limit: { type: 'number', description: 'Max results (default 50, max 100)' },
+    offset: { type: 'number', description: 'Skip first N results (for offset pagination).' },
     // v0.29 — surface filter that already exists on PageFilters.
     updated_after: {
       type: 'string',
@@ -1349,6 +1350,10 @@ const list_pages: Operation = {
       description: 'Sort order. Default updated_desc (matches pre-v0.29). Options: updated_desc, updated_asc, created_desc, slug.',
     },
     include_deleted: { type: 'boolean', description: 'v0.26.5: include soft-deleted pages (default: false). Used by restore workflows and operator diagnostics.' },
+    with_total: {
+      type: 'boolean',
+      description: 'XDENT: when true, return { pages, total, limit, offset } (total = count of all matching pages, ignoring limit/offset) so offset-pagination UIs can render page numbers / jump to last. When false/omitted the bare page array is returned (unchanged).',
+    },
   },
   handler: async (ctx, p) => {
     // Whitelist the sort enum at the handler before passing to the engine.
@@ -1364,22 +1369,32 @@ const list_pages: Operation = {
     // were ignored at this op handler and the engine returned every source's
     // pages indiscriminately.
     const scope = sourceScopeOpts(ctx);
-    const pages = await ctx.engine.listPages({
+    const limit = clampSearchLimit(p.limit as number | undefined, 50, 100);
+    const offset = typeof p.offset === 'number' && p.offset > 0 ? Math.floor(p.offset) : 0;
+    const filters = {
       type: p.type as any,
       tag: p.tag as string,
-      limit: clampSearchLimit(p.limit as number | undefined, 50, 100),
       includeDeleted: (p.include_deleted as boolean) === true,
       updated_after: typeof p.updated_after === 'string' ? p.updated_after : undefined,
       sort,
       ...scope,
-    });
-    return pages.map(pg => ({
+    };
+    const pages = await ctx.engine.listPages({ ...filters, limit, offset });
+    const rows = pages.map(pg => ({
       slug: pg.slug,
       type: pg.type,
       title: pg.title,
       updated_at: pg.updated_at,
       ...(pg.deleted_at ? { deleted_at: pg.deleted_at } : {}),
     }));
+    // XDENT: opt-in total for offset-pagination UIs (e.g. chat-ui /admin/pages).
+    // The bare-array return is preserved when with_total is falsy so existing
+    // CLI / minion / agent consumers are unaffected.
+    if ((p.with_total as boolean) === true) {
+      const total = await ctx.engine.countPages(filters);
+      return { pages: rows, total, limit, offset };
+    }
+    return rows;
   },
   scope: 'read',
   cliHints: { name: 'list' },

@@ -137,6 +137,27 @@ describe('PGLiteEngine: Pages', () => {
     expect((await engine.listPages({ slugPrefix: 'media/x', limit: 100 })).length).toBe(2);
   });
 
+  test('countPages + offset pagination (XDENT with_total)', async () => {
+    await truncateAll();
+    for (let i = 0; i < 7; i++) {
+      await engine.putPage(`docs/page-${i}`, { ...testPage, type: 'concept' });
+    }
+    await engine.putPage('people/alice', { ...testPage, type: 'person' });
+
+    // countPages ignores limit/offset and matches the same filters as listPages.
+    expect(await engine.countPages()).toBe(8);
+    expect(await engine.countPages({ type: 'concept' })).toBe(7);
+    expect(await engine.countPages({ type: 'person' })).toBe(1);
+
+    // offset walks the ordered set without overlap.
+    const p1 = await engine.listPages({ type: 'concept', sort: 'slug', limit: 3, offset: 0 });
+    const p2 = await engine.listPages({ type: 'concept', sort: 'slug', limit: 3, offset: 3 });
+    const p3 = await engine.listPages({ type: 'concept', sort: 'slug', limit: 3, offset: 6 });
+    expect(p1.map((p) => p.slug)).toEqual(['docs/page-0', 'docs/page-1', 'docs/page-2']);
+    expect(p2.map((p) => p.slug)).toEqual(['docs/page-3', 'docs/page-4', 'docs/page-5']);
+    expect(p3.map((p) => p.slug)).toEqual(['docs/page-6']);
+  });
+
   test('listPages slugPrefix escapes LIKE metacharacters', async () => {
     await truncateAll();
     await engine.putPage('safe/foo', { ...testPage, type: 'concept' });
