@@ -1354,6 +1354,11 @@ const list_pages: Operation = {
       type: 'boolean',
       description: 'XDENT: when true, return { pages, total, limit, offset } (total = count of all matching pages, ignoring limit/offset) so offset-pagination UIs can render page numbers / jump to last. When false/omitted the bare page array is returned (unchanged).',
     },
+    exclude_types: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'XDENT: exclude pages of these types (e.g. ["call"]). Applied to both the page list AND the with_total count.',
+    },
   },
   handler: async (ctx, p) => {
     // Whitelist the sort enum at the handler before passing to the engine.
@@ -1371,8 +1376,12 @@ const list_pages: Operation = {
     const scope = sourceScopeOpts(ctx);
     const limit = clampSearchLimit(p.limit as number | undefined, 50, 100);
     const offset = typeof p.offset === 'number' && p.offset > 0 ? Math.floor(p.offset) : 0;
+    const excludeTypes = Array.isArray(p.exclude_types)
+      ? (p.exclude_types as unknown[]).filter((t): t is string => typeof t === 'string')
+      : undefined;
     const filters = {
       type: p.type as any,
+      excludeTypes: excludeTypes && excludeTypes.length > 0 ? excludeTypes : undefined,
       tag: p.tag as string,
       includeDeleted: (p.include_deleted as boolean) === true,
       updated_after: typeof p.updated_after === 'string' ? p.updated_after : undefined,

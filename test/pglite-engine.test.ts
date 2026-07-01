@@ -156,6 +156,12 @@ describe('PGLiteEngine: Pages', () => {
     expect(p1.map((p) => p.slug)).toEqual(['docs/page-0', 'docs/page-1', 'docs/page-2']);
     expect(p2.map((p) => p.slug)).toEqual(['docs/page-3', 'docs/page-4', 'docs/page-5']);
     expect(p3.map((p) => p.slug)).toEqual(['docs/page-6']);
+
+    // excludeTypes drops matching types from both list and count.
+    expect(await engine.countPages({ excludeTypes: ['person'] })).toBe(7);
+    const noPeople = await engine.listPages({ excludeTypes: ['person'], sort: 'slug', limit: 100 });
+    expect(noPeople.every((p) => p.type !== 'person')).toBe(true);
+    expect(noPeople.length).toBe(7);
   });
 
   test('listPages slugPrefix escapes LIKE metacharacters', async () => {

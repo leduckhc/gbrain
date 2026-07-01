@@ -1186,6 +1186,9 @@ export class PostgresEngine implements BrainEngine {
 
     // Build conditions with sql fragments. postgres.js supports fragment composition.
     const typeCondition = filters?.type ? sql`AND p.type = ${filters.type}` : sql``;
+    const excludeTypesCondition = filters?.excludeTypes && filters.excludeTypes.length > 0
+      ? sql`AND p.type <> ALL(${filters.excludeTypes}::text[])`
+      : sql``;
     const tagJoin = filters?.tag ? sql`JOIN tags t ON t.page_id = p.id` : sql``;
     const tagCondition = filters?.tag ? sql`AND t.tag = ${filters.tag}` : sql``;
     const updatedCondition = updatedAfter ? sql`AND p.updated_at > ${updatedAfter}::timestamptz` : sql``;
@@ -1216,7 +1219,7 @@ export class PostgresEngine implements BrainEngine {
     const rows = await sql`
       SELECT p.* FROM pages p
       ${tagJoin}
-      WHERE 1=1 ${typeCondition} ${tagCondition} ${updatedCondition} ${slugCondition} ${sourceCondition} ${deletedCondition}
+      WHERE 1=1 ${typeCondition} ${excludeTypesCondition} ${tagCondition} ${updatedCondition} ${slugCondition} ${sourceCondition} ${deletedCondition}
       ORDER BY ${orderBy} LIMIT ${limit} OFFSET ${offset}
     `;
 
@@ -1226,6 +1229,9 @@ export class PostgresEngine implements BrainEngine {
   async countPages(filters?: PageFilters): Promise<number> {
     const sql = this.sql;
     const typeCondition = filters?.type ? sql`AND p.type = ${filters.type}` : sql``;
+    const excludeTypesCondition = filters?.excludeTypes && filters.excludeTypes.length > 0
+      ? sql`AND p.type <> ALL(${filters.excludeTypes}::text[])`
+      : sql``;
     const tagJoin = filters?.tag ? sql`JOIN tags t ON t.page_id = p.id` : sql``;
     const tagCondition = filters?.tag ? sql`AND t.tag = ${filters.tag}` : sql``;
     const updatedCondition = filters?.updated_after
@@ -1244,7 +1250,7 @@ export class PostgresEngine implements BrainEngine {
     const rows = await sql`
       SELECT COUNT(*)::int AS count FROM pages p
       ${tagJoin}
-      WHERE 1=1 ${typeCondition} ${tagCondition} ${updatedCondition} ${slugCondition} ${sourceCondition} ${deletedCondition}
+      WHERE 1=1 ${typeCondition} ${excludeTypesCondition} ${tagCondition} ${updatedCondition} ${slugCondition} ${sourceCondition} ${deletedCondition}
     `;
     return (rows[0]?.count as number) ?? 0;
   }

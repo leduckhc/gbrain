@@ -282,6 +282,12 @@ export interface PageInput {
 
 export interface PageFilters {
   type?: PageType;
+  /**
+   * XDENT: exclude pages whose `type` is in this list (`AND p.type <> ALL(...)`).
+   * gbrain has no native exclude-type filter; chat-ui's /admin/pages uses this to
+   * hide `call` transcripts (≈89% of the brain) while keeping offset/total exact.
+   */
+  excludeTypes?: string[];
   tag?: string;
   limit?: number;
   offset?: number;

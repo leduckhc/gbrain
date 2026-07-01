@@ -1179,6 +1179,10 @@ export class PGLiteEngine implements BrainEngine {
       params.push(filters.type);
       where.push(`p.type = $${params.length}`);
     }
+    if (filters?.excludeTypes && filters.excludeTypes.length > 0) {
+      params.push(filters.excludeTypes);
+      where.push(`p.type <> ALL($${params.length}::text[])`);
+    }
     if (filters?.tag) {
       params.push(filters.tag);
       where.push(`t.tag = $${params.length}`);
@@ -1232,6 +1236,10 @@ export class PGLiteEngine implements BrainEngine {
     if (filters?.type) {
       params.push(filters.type);
       where.push(`p.type = $${params.length}`);
+    }
+    if (filters?.excludeTypes && filters.excludeTypes.length > 0) {
+      params.push(filters.excludeTypes);
+      where.push(`p.type <> ALL($${params.length}::text[])`);
     }
     if (filters?.tag) {
       params.push(filters.tag);
